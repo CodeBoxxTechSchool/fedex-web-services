@@ -14,12 +14,16 @@ module FedexWebServices
       :processShipment
     end
 
+    def endpoint_path
+      '/web-services/ship'
+    end
+
     def service_id
       :ship
     end
 
     def version
-      12
+      26
     end
 
     def issue_request(port, credentials)
@@ -68,6 +72,21 @@ module FedexWebServices
       contents.requestedShipment.requestedPackageLineItems.customerReferences << ref
     end
 
+    def electronic_trade_documents!(document_id)
+      mod = self.soap_module
+      contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes << 'ELECTRONIC_TRADE_DOCUMENTS'
+      contents.requestedShipment.specialServicesRequested.etdDetail = mod::EtdDetail.new.tap do |etd|
+        etd.documentReferences = mod::UploadDocumentReferenceDetail.new.tap do |ref|
+          ref.documentProducer = mod::UploadDocumentProducerType::CUSTOMER
+          ref.documentType = mod::UploadDocumentType::COMMERCIAL_INVOICE
+          ref.documentId = document_id
+          ref.documentIdProducer = mod::UploadDocumentIdProducer::CUSTOMER
+        end
+      end
+    end
+
     def self.shipment_requests(service_type, from, to, label_specification, package_weights)
       package_weights.map.with_index do |weight, ndx|
         new.tap do |request|
@@ -76,7 +95,7 @@ module FedexWebServices
           request.contents.requestedShipment = mod::RequestedShipment.new.tap do |rs|
             rs.shipTimestamp = Time.now.iso8601
             rs.serviceType   = service_type
-            rs.packagingType = mod::PackagingType::YOUR_PACKAGING
+            rs.packagingType = 'YOUR_PACKAGING'
 
             rs.shipper   = from
             rs.recipient = to

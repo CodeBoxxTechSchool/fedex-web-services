@@ -16,12 +16,11 @@ module FedexWebServices
     end
 
     def process_shipments(requests)
-      port = Ship::ShipPortType.new(service_url)
       first_response = nil
 
       requests.map.with_index do |request, ndx|
         if (ndx == 0)
-          first_response = issue_request(port, request)
+          first_response = issue_request(Ship::ShipPortType.new(service_url(request)), request)
         else
           request.for_master_tracking_number!(first_response.tracking_number)
           issue_request(port, request)
@@ -29,21 +28,24 @@ module FedexWebServices
       end
     end
 
+    def upload_documents(request)
+      issue_request(UploadDocument::UploadDocumentPortType.new(service_url(request)), request)
+    end
+
     def delete_shipment(request)
-      issue_request(Ship::ShipPortType.new(service_url), request)
+      issue_request(Ship::ShipPortType.new(service_url(request)), request)
     end
 
     def get_rates(request)
     end
 
     def close_smart_post(request)
-      issue_request(Close::ClosePortType.new(service_url), request)
+      issue_request(Close::ClosePortType.new(service_url(request)), request)
     end
 
-    def service_url
-      @service_url ||= (@credentials.environment.to_sym == :production) ?
-          'https://ws.fedex.com/web-services' :
-          'https://wsbeta.fedex.com/web-services'
+    def service_url(request)
+      hostname = @credentials.environment.to_sym == :production ? 'ws.fedex.com' : 'wsbeta.fedex.com'
+      URI::join("https://#{hostname}", request.endpoint_path)
     end
 
     private

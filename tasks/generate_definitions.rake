@@ -16,7 +16,8 @@ task :generate_definitions do
         "module_path"      => "FedexWebServices::Soap::#{service}",
         "mapping_registry" => nil,
         "driver"           => nil,
-        "classdef"         => nil
+        "classdef"         => nil,
+        "force"            => true
     )
     worker.run
   end
