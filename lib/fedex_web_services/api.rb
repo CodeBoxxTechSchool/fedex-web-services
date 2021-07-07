@@ -23,7 +23,7 @@ module FedexWebServices
           first_response = issue_request(Ship::ShipPortType.new(service_url(request)), request)
         else
           request.for_master_tracking_number!(first_response.tracking_number)
-          issue_request(port, request)
+          issue_request(Ship::ShipPortType.new(service_url(request)), request)
         end
       end
     end

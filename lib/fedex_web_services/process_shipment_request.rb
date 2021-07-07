@@ -96,6 +96,7 @@ module FedexWebServices
             rs.shipTimestamp = Time.now.iso8601
             rs.serviceType   = service_type
             rs.packagingType = 'YOUR_PACKAGING'
+            rs.totalWeight   =  weight
 
             rs.shipper   = from
             rs.recipient = to
