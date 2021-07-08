@@ -96,7 +96,12 @@ module FedexWebServices
             rs.shipTimestamp = Time.now.iso8601
             rs.serviceType   = service_type
             rs.packagingType = 'YOUR_PACKAGING'
-            rs.totalWeight   =  weight
+            if ndx == 0
+              rs.totalWeight = mod::Weight.new.tap do |w|
+                w.units = "KG"
+                w.value = package_weights.sum{|x| x.value}
+              end
+            end
 
             rs.shipper   = from
             rs.recipient = to
