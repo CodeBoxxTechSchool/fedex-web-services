@@ -46,6 +46,33 @@ module FedexWebServices
       contents.requestedShipment.dropoffType = soap_module::DropoffType::REGULAR_PICKUP
     end
 
+    def event_notification!(event, options = {})
+      contents.requestedShipment.specialServicesRequested ||= soap_module::ShipmentSpecialServicesRequested.new
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
+
+      case event
+        when :estimated_delivery
+          contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['EVENT_NOTIFICATION']).uniq
+          contents.requestedShipment.specialServicesRequested.eventNotificationDetail = soap_module::ShipmentEventNotificationDetail.new.tap do |detail|
+            detail.aggregationType = soap_module::ShipmentNotificationAggregationType::PER_SHIPMENT
+            detail.personalMessage = ''
+            detail.eventNotifications = soap_module::ShipmentEventNotificationSpecification.new.tap do |notifications|
+              notifications.role = soap_module::ShipmentNotificationRoleType::RECIPIENT
+              notifications.events ||= []
+              notifications.events = (notifications.events + [soap_module::NotificationEventType::ON_ESTIMATED_DELIVERY]).uniq
+              notifications.notificationDetail = soap_module::NotificationDetail.new(
+                soap_module::NotificationType::EMAIL,
+                soap_module::EMailDetail.new(options[:email], options[:name]),
+                soap_module::Localization.new('EN')
+              )
+              notifications.formatSpecification = soap_module::ShipmentNotificationFormatSpecification.new(
+                soap_module::NotificationFormatType::HTML
+              )
+            end
+          end
+      end
+    end
+
     def list_rate!
       contents.requestedShipment.rateRequestTypes = [ soap_module::RateRequestType::LIST ]
     end
@@ -76,7 +103,7 @@ module FedexWebServices
       mod = self.soap_module
       contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
       contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
-      contents.requestedShipment.specialServicesRequested.specialServiceTypes << 'ELECTRONIC_TRADE_DOCUMENTS'
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['ELECTRONIC_TRADE_DOCUMENTS']).uniq
       contents.requestedShipment.specialServicesRequested.etdDetail = mod::EtdDetail.new.tap do |etd|
         etd.documentReferences = mod::UploadDocumentReferenceDetail.new.tap do |ref|
           ref.documentProducer = mod::UploadDocumentProducerType::CUSTOMER
