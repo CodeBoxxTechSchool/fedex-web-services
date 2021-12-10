@@ -10,6 +10,10 @@ module FedexWebServices
       FedexWebServices::Soap::Ship
     end
 
+    def soap_rate
+      FedexWebServices::Soap::Rate
+    end
+      
     def remote_method
       :processShipment
     end
@@ -80,7 +84,7 @@ module FedexWebServices
       contents.requestedShipment.requestedPackageLineItems.customerReferences << ref
     end
 
-    def self.shipment_requests(service_type, from, to, label_specification, package_weights, special_services_requested, dimensions)
+    def self.shipment_requests(service_type, from, to, label_specification, package_weights, special_services_requested, dimensions, customs_clearance_detail)
       package_weights.map.with_index do |weight, ndx|
         new.tap do |request|
           mod = request.soap_module
@@ -93,7 +97,7 @@ module FedexWebServices
             rs.shipper   = from
             rs.recipient = to
             rs.labelSpecification = label_specification
-
+            rs.customsClearanceDetail = customs_clearance_detail
             rs.packageCount = package_weights.size
             rs.requestedPackageLineItems = mod::RequestedPackageLineItem.new.tap do |rpli|
               rpli.sequenceNumber = ndx + 1
