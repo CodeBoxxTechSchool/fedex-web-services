@@ -76,6 +76,7 @@ module FedexWebServices
       mod = self.soap_module
       ref = mod::CustomerReference.new(mod::CustomerReferenceType::INVOICE_NUMBER, invoice_number)
 
+
       contents.requestedShipment.requestedPackageLineItems.customerReferences ||= []
       contents.requestedShipment.requestedPackageLineItems.customerReferences << ref
     end
