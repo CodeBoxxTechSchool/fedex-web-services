@@ -40,7 +40,7 @@ class ShipTest < IntegrationTest
   include FedexWebServices::Soap
 
   def test_process_shipment
-    service = Ship::ServiceType::FEDEX_2_DAY
+    service = "FEDEX_2_DAY"
 
     from = Ship::Party.new.tap do |shipper|
       shipper.contact = Ship::Contact.new.tap do |contact|

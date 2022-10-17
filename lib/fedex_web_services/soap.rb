@@ -4,3 +4,4 @@ end
 require 'fedex_web_services/soap/CloseServiceDefinitionsDriver'
 require 'fedex_web_services/soap/RateServiceDefinitionsDriver'
 require 'fedex_web_services/soap/ShipServiceDefinitionsDriver'
+require 'fedex_web_services/soap/UploadDocumentServiceDefinitionsDriver'

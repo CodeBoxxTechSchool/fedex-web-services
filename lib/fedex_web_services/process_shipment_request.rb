@@ -14,12 +14,16 @@ module FedexWebServices
       :processShipment
     end
 
+    def endpoint_path
+      '/web-services/ship'
+    end
+
     def service_id
       :ship
     end
 
     def version
-      12
+      26
     end
 
     def issue_request(port, credentials)
@@ -40,6 +44,33 @@ module FedexWebServices
 
     def regular_pickup!
       contents.requestedShipment.dropoffType = soap_module::DropoffType::REGULAR_PICKUP
+    end
+
+    def event_notification!(event, options = {})
+      contents.requestedShipment.specialServicesRequested ||= soap_module::ShipmentSpecialServicesRequested.new
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
+
+      case event
+        when :estimated_delivery
+          contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['EVENT_NOTIFICATION']).uniq
+          contents.requestedShipment.specialServicesRequested.eventNotificationDetail = soap_module::ShipmentEventNotificationDetail.new.tap do |detail|
+            detail.aggregationType = soap_module::ShipmentNotificationAggregationType::PER_SHIPMENT
+            detail.personalMessage = ''
+            detail.eventNotifications = soap_module::ShipmentEventNotificationSpecification.new.tap do |notifications|
+              notifications.role = soap_module::ShipmentNotificationRoleType::RECIPIENT
+              notifications.events ||= []
+              notifications.events = (notifications.events + [soap_module::NotificationEventType::ON_ESTIMATED_DELIVERY]).uniq
+              notifications.notificationDetail = soap_module::NotificationDetail.new(
+                soap_module::NotificationType::EMAIL,
+                soap_module::EMailDetail.new(options[:email], options[:name]),
+                soap_module::Localization.new('EN')
+              )
+              notifications.formatSpecification = soap_module::ShipmentNotificationFormatSpecification.new(
+                soap_module::NotificationFormatType::HTML
+              )
+            end
+          end
+      end
     end
 
     def list_rate!
@@ -68,6 +99,21 @@ module FedexWebServices
       contents.requestedShipment.requestedPackageLineItems.customerReferences << ref
     end
 
+    def electronic_trade_documents!(document_id)
+      mod = self.soap_module
+      contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['ELECTRONIC_TRADE_DOCUMENTS']).uniq
+      contents.requestedShipment.specialServicesRequested.etdDetail = mod::EtdDetail.new.tap do |etd|
+        etd.documentReferences = mod::UploadDocumentReferenceDetail.new.tap do |ref|
+          ref.documentProducer = mod::UploadDocumentProducerType::CUSTOMER
+          ref.documentType = mod::UploadDocumentType::COMMERCIAL_INVOICE
+          ref.documentId = document_id
+          ref.documentIdProducer = mod::UploadDocumentIdProducer::CUSTOMER
+        end
+      end
+    end
+
     def self.shipment_requests(service_type, from, to, label_specification, package_weights)
       package_weights.map.with_index do |weight, ndx|
         new.tap do |request|
@@ -76,7 +122,13 @@ module FedexWebServices
           request.contents.requestedShipment = mod::RequestedShipment.new.tap do |rs|
             rs.shipTimestamp = Time.now.iso8601
             rs.serviceType   = service_type
-            rs.packagingType = mod::PackagingType::YOUR_PACKAGING
+            rs.packagingType = 'YOUR_PACKAGING'
+            if ndx == 0
+              rs.totalWeight = mod::Weight.new.tap do |w|
+                w.units = "KG"
+                w.value = package_weights.sum{|x| x.value}
+              end
+            end
 
             rs.shipper   = from
             rs.recipient = to
