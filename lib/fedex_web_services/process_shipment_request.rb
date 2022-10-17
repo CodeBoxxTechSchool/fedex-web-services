@@ -127,7 +127,7 @@ module FedexWebServices
       end
     end
 
-    def etd_minimal
+    def etd_minimal!
       mod = self.soap_module
       contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
       contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
