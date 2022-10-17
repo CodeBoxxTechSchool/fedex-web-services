@@ -42,6 +42,18 @@ module FedexWebServices
       end
     end
 
+    def third_party_paid!(account_number)
+      mod = self.soap_module
+
+      contents.requestedShipment.shippingChargesPayment = mod::Payment.new.tap do |scp|
+        scp.paymentType = mod::PaymentType::THIRD_PARTY
+
+        scp.payor = mod::Payor.new
+        scp.payor.responsibleParty = contents.requestedShipment.shipper.dup
+        scp.payor.responsibleParty.accountNumber = account_number
+      end
+    end
+
     def regular_pickup!
       contents.requestedShipment.dropoffType = soap_module::DropoffType::REGULAR_PICKUP
     end
@@ -114,7 +126,7 @@ module FedexWebServices
       end
     end
 
-    def self.shipment_requests(service_type, from, to, label_specification, package_weights)
+    def self.shipment_requests(service_type, from, to, label_specification, package_weights, special_services_requested, dimensions)
       package_weights.map.with_index do |weight, ndx|
         new.tap do |request|
           mod = request.soap_module
@@ -132,13 +144,14 @@ module FedexWebServices
 
             rs.shipper   = from
             rs.recipient = to
-
             rs.labelSpecification = label_specification
 
             rs.packageCount = package_weights.size
             rs.requestedPackageLineItems = mod::RequestedPackageLineItem.new.tap do |rpli|
               rpli.sequenceNumber = ndx + 1
               rpli.weight = weight
+              rpli.specialServicesRequested = special_services_requested if special_services_requested
+              rpli.dimensions = dimensions[ndx]
             end
           end
         end
