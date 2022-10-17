@@ -22,6 +22,10 @@ module FedexWebServices
       raise "version must be implemented by subclasses of Request::Base"
     end
 
+    def endpoint_path
+      '/web-services'
+    end
+
     def issue_request(port, credentials)
       Response.new(port.send(remote_method, request_contents(credentials)))
     end

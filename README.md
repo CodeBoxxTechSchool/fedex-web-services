@@ -28,7 +28,7 @@ credentials = Api::Credentials.new(
 )
 api = Api.new(credentials)
 
-service = Ship::ServiceType::FEDEX_2_DAY
+service = 'FEDEX_2_DAY'
 
 from = Ship::Party.new.tap do |shipper|
   shipper.contact = Ship::Contact.new.tap do |contact|
