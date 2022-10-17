@@ -49,9 +49,8 @@ module FedexWebServices
         scp.paymentType = mod::PaymentType::THIRD_PARTY
 
         scp.payor = mod::Payor.new
-        scp.payor.responsibleParty.new.tap do |respParty|
-          respParty.accountNumber = account_number
-        end
+        scp.payor.responsibleParty = contents.requestedShipment.shipper.dup
+        scp.payor.responsibleParty.accountNumber = account_number
       end
     end
 
