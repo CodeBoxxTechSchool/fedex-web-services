@@ -49,7 +49,6 @@ module FedexWebServices
         scp.paymentType = mod::PaymentType::THIRD_PARTY
 
         scp.payor = mod::Payor.new
-        scp.payor.responsibleParty = contents.requestedShipment.shipper.dup
         scp.payor.responsibleParty.accountNumber = account_number
       end
     end
@@ -123,6 +122,20 @@ module FedexWebServices
           ref.documentId = document_id
           ref.documentIdProducer = mod::UploadDocumentIdProducer::CUSTOMER
         end
+      end
+    end
+
+    def etd_minimal
+      mod = self.soap_module
+      contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
+      contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['ELECTRONIC_TRADE_DOCUMENTS']).uniq
+      contents.requestedShipment.specialServicesRequested.etdDetail = mod::EtdDetail.new.tap do |etd|
+        etd.attributes = mod::EtdAttributeType::POST_SHIPMENT_UPLOAD_REQUESTED
+      end
+
+      contents.shippingDocumentSpecification ||= mod::ShippingDocumentSpecification.new.tap do |sds|
+        sds.shippingDocumentTypes = mod::RequestedShippingDocumentType::COMMERCIAL_INVOICE
       end
     end
 
