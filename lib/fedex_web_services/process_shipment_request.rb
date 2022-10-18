@@ -63,30 +63,30 @@ module FedexWebServices
       contents.requestedShipment.specialServicesRequested.specialServiceTypes ||= []
 
       case event
-        when :estimated_delivery
-          contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['EVENT_NOTIFICATION']).uniq
-          contents.requestedShipment.specialServicesRequested.eventNotificationDetail = soap_module::ShipmentEventNotificationDetail.new.tap do |detail|
-            detail.aggregationType = soap_module::ShipmentNotificationAggregationType::PER_SHIPMENT
-            detail.personalMessage = ''
-            detail.eventNotifications = soap_module::ShipmentEventNotificationSpecification.new.tap do |notifications|
-              notifications.role = soap_module::ShipmentNotificationRoleType::RECIPIENT
-              notifications.events ||= []
-              notifications.events = (notifications.events + [soap_module::NotificationEventType::ON_ESTIMATED_DELIVERY]).uniq
-              notifications.notificationDetail = soap_module::NotificationDetail.new(
-                soap_module::NotificationType::EMAIL,
-                soap_module::EMailDetail.new(options[:email], options[:name]),
-                soap_module::Localization.new('EN')
-              )
-              notifications.formatSpecification = soap_module::ShipmentNotificationFormatSpecification.new(
-                soap_module::NotificationFormatType::HTML
-              )
-            end
+      when :estimated_delivery
+        contents.requestedShipment.specialServicesRequested.specialServiceTypes = (contents.requestedShipment.specialServicesRequested.specialServiceTypes + ['EVENT_NOTIFICATION']).uniq
+        contents.requestedShipment.specialServicesRequested.eventNotificationDetail = soap_module::ShipmentEventNotificationDetail.new.tap do |detail|
+          detail.aggregationType = soap_module::ShipmentNotificationAggregationType::PER_SHIPMENT
+          detail.personalMessage = ''
+          detail.eventNotifications = soap_module::ShipmentEventNotificationSpecification.new.tap do |notifications|
+            notifications.role = soap_module::ShipmentNotificationRoleType::RECIPIENT
+            notifications.events ||= []
+            notifications.events = (notifications.events + [soap_module::NotificationEventType::ON_ESTIMATED_DELIVERY]).uniq
+            notifications.notificationDetail = soap_module::NotificationDetail.new(
+              soap_module::NotificationType::EMAIL,
+              soap_module::EMailDetail.new(options[:email], options[:name]),
+              soap_module::Localization.new('EN')
+            )
+            notifications.formatSpecification = soap_module::ShipmentNotificationFormatSpecification.new(
+              soap_module::NotificationFormatType::HTML
+            )
           end
+        end
       end
     end
 
     def list_rate!
-      contents.requestedShipment.rateRequestTypes = [ soap_module::RateRequestType::LIST ]
+      contents.requestedShipment.rateRequestTypes = [soap_module::RateRequestType::LIST]
     end
 
     def for_master_tracking_number!(tracking_number)
@@ -126,6 +126,37 @@ module FedexWebServices
       end
     end
 
+    def customs_info!(unit_value = 1, quantity = 1, currency, description, hs_code, weight)
+      mod = self.soap_module
+
+      contents.requestedShipment.customsClearanceDetail = mod::CustomsClearanceDetail.new.tap do |ccd|
+        ccd.dutiesPayment = mod::Payment.new(mod::PaymentType::RECIPIENT, nil, nil, nil, nil)
+        ccd.customsValue = {
+          currency: currency || 'USD',
+          amount: unit_value * quantity
+        }
+
+        ccd.commercialInvoice = mod::CommercialInvoice.new.tap do |ci|
+          ci.purpose = mod::PurposeOfShipmentType::SOLD
+          ci.termsOfSale = 'DDU'
+        end
+
+        ccd.commodities = mod::Commodity.new.tap do |cmy|
+          cmy.numberOfPieces = 1
+          cmy.description = description
+          cmy.countryOfManufacture = 'CN'
+          cmy.harmonizedCode = hs_code || ''
+          cmy.weight = mod::Weight.new('LB', weight)
+          cmy.quantity = quantity
+          cmy.quantityUnits = 'EA'
+          cmy.unitPrice = {
+            currency: currency || 'USD',
+            amount: unit_value
+          }
+        end
+      end
+    end
+
     def etd_minimal!
       mod = self.soap_module
       contents.requestedShipment.specialServicesRequested ||= mod::ShipmentSpecialServicesRequested.new
@@ -135,9 +166,16 @@ module FedexWebServices
         etd.attributes = mod::EtdAttributeType::POST_SHIPMENT_UPLOAD_REQUESTED
       end
 
-      contents.shippingDocumentSpecification ||= mod::ShippingDocumentSpecification.new.tap do |sds|
-        sds.shippingDocumentTypes = mod::RequestedShippingDocumentType::COMMERCIAL_INVOICE
-      end
+      # contents.requestedShipment.shippingDocumentSpecification ||= mod::ShippingDocumentSpecification.new.tap do |sds|
+      #   sds.shippingDocumentTypes = mod::RequestedShippingDocumentType::COMMERCIAL_INVOICE
+      #   sds.commercialInvoiceDetail = mod::CommercialInvoiceDetail.new.tap do |cid|
+      #     cid.format = mod::ShippingDocumentFormat.tap do |sdf|
+      #       sdf.imageType = mod::ShippingDocumentImageType::PDF
+      #       sdf.stockType = mod::ShippingDocumentStockType::PAPER_LETTER
+      #     end
+      #   end
+      # end
+
     end
 
     def self.shipment_requests(service_type, from, to, label_specification, package_weights, special_services_requested, dimensions)
@@ -147,16 +185,16 @@ module FedexWebServices
 
           request.contents.requestedShipment = mod::RequestedShipment.new.tap do |rs|
             rs.shipTimestamp = Time.now.iso8601
-            rs.serviceType   = service_type
+            rs.serviceType = service_type
             rs.packagingType = 'YOUR_PACKAGING'
             if ndx == 0
               rs.totalWeight = mod::Weight.new.tap do |w|
                 w.units = "KG"
-                w.value = package_weights.sum{|x| x.value}
+                w.value = package_weights.sum { |x| x.value }
               end
             end
 
-            rs.shipper   = from
+            rs.shipper = from
             rs.recipient = to
             rs.labelSpecification = label_specification
 
