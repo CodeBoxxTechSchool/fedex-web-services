@@ -166,16 +166,15 @@ module FedexWebServices
         etd.attributes = mod::EtdAttributeType::POST_SHIPMENT_UPLOAD_REQUESTED
       end
 
-      # contents.requestedShipment.shippingDocumentSpecification ||= mod::ShippingDocumentSpecification.new.tap do |sds|
-      #   sds.shippingDocumentTypes = mod::RequestedShippingDocumentType::COMMERCIAL_INVOICE
-      #   sds.commercialInvoiceDetail = mod::CommercialInvoiceDetail.new.tap do |cid|
-      #     cid.format = mod::ShippingDocumentFormat.tap do |sdf|
-      #       sdf.imageType = mod::ShippingDocumentImageType::PDF
-      #       sdf.stockType = mod::ShippingDocumentStockType::PAPER_LETTER
-      #     end
-      #   end
-      # end
-
+      contents.requestedShipment.shippingDocumentSpecification ||= mod::ShippingDocumentSpecification.new.tap do |sds|
+        sds.shippingDocumentTypes = mod::RequestedShippingDocumentType::COMMERCIAL_INVOICE
+        sds.commercialInvoiceDetail = mod::CommercialInvoiceDetail.new.tap do |cid|
+          cid.format = mod::ShippingDocumentFormat.new.tap do |sdf|
+            sdf.imageType = mod::ShippingDocumentImageType::PDF
+            sdf.stockType = mod::ShippingDocumentStockType::PAPER_LETTER
+          end
+        end
+      end
     end
 
     def self.shipment_requests(service_type, from, to, label_specification, package_weights, special_services_requested, dimensions)
