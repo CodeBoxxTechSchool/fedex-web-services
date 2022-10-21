@@ -145,7 +145,7 @@ module FedexWebServices
           cmy.numberOfPieces = 1
           cmy.description = description
           cmy.countryOfManufacture = 'CN'
-          cmy.harmonizedCode = hs_code || ''
+          cmy.harmonizedCode = hs_code || '6404112030'
           cmy.weight = mod::Weight.new('LB', weight)
           cmy.quantity = quantity
           cmy.quantityUnits = 'EA'
